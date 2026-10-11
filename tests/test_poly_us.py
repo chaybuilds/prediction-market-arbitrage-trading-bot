@@ -20,7 +20,7 @@ class Markets:
         assert slug==SLUG
         return self.bookdata
     def list(self,params):
-        return {"markets":[{"slug":SLUG,"question":"Synthetic wire market"}]}
+        return {"markets":[{"slug":SLUG,"question":"Synthetic wire market","active":True,"closed":False}]}
 class Client:
     def __init__(self):self.markets=Markets()
     def close(self):raise AssertionError("should not close injected test SDK")
@@ -70,3 +70,18 @@ def test_account_key_presence_never_grants_trade_permission(monkeypatch):
     assert conn["account_key_id_configured"] and conn["account_secret_configured"]
     assert conn["account_verified"] is False
     assert conn["execution_enabled"] is False
+
+def test_catalog_excludes_inactive_resolved_markets():
+    c=Client()
+    def combined(params):
+        assert params["active"] is True
+        assert params["closed"] is False
+        assert params["categories"]==["crypto"]
+        return {"markets":[
+            {"slug":"aec-nfl-lac-ten-2025-11-02","active":False,"closed":True,"title":"Old game"},
+            {"slug":SLUG,"active":True,"closed":False,"title":"Before January 2027"}]}
+    c.markets.list=combined
+    rows=public_catalog(limit=8,client=c)["markets"]
+    assert len(rows)==1
+    assert rows[0]["slug"]==SLUG
+    assert SLUG in rows[0]["title"]

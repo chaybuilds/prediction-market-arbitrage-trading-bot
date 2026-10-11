@@ -132,7 +132,7 @@ def public_catalog(*, limit: int = 8, client: Any = None) -> dict[str, Any]:
         from polymarket_us import PolymarketUS
         client = PolymarketUS(timeout=6.0, max_retries=0)
     try:
-        payload = client.markets.list({"limit": limit})
+        payload = client.markets.list({"limit": min(80, max(24, limit * 4)), "active": True, "closed": False, "categories": ["crypto"]})
     except Exception as exc:
         raise PublicQuoteUnavailable("official public catalog unavailable") from exc
     finally:
@@ -142,14 +142,14 @@ def public_catalog(*, limit: int = 8, client: Any = None) -> dict[str, Any]:
     result = []
     if isinstance(rows, list):
         for row in rows[:limit]:
-            if not isinstance(row, dict):
+            if not isinstance(row, dict) or row.get("active") is not True or row.get("closed") is not False:
                 continue
             slug = row.get("slug")
             if not isinstance(slug, str) or MARKET_SLUG.fullmatch(slug) is None:
                 continue
             title = next((v for v in (row.get("question"), row.get("title"), row.get("name"))
                           if isinstance(v, str) and v.strip()), slug)
-            result.append({"slug": slug, "title": title[:180],
+            result.append({"slug": slug, "title": (title + "  ·  " + slug)[:180],
                            "state": str(row.get("status") or row.get("state") or "UNVERIFIED"),
                            "venue": "POLYMARKET_US"})
     return {"schema": "chaytrades.poly_us.public_catalog.v1",
