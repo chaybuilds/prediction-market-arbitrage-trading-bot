@@ -263,3 +263,56 @@ def poly_us_witness(slug: str) -> dict[str, Any]:
 def poly_us_execution_status() -> dict[str, Any]:
     from api.execution_guard import execution_status
     return execution_status()
+
+
+
+@app.get("/api/poly-us/nexus/{slug}")
+def poly_us_nexus(slug: str, request: Request) -> dict[str, Any]:
+    """One real US quote -> private Worldline no-action baseline, not a trade signal.
+
+    The browser never receives an account secret or NEXUS bearer token. The
+    Vercel deployment's separate protection header stays server-side.
+    """
+    if not _public_us_enabled():
+        raise HTTPException(status_code=503, detail="Public US research disabled.")
+    if request.headers.get("origin") not in allowed_origins:
+        raise HTTPException(status_code=403, detail="Origin not allowed for research preview.")
+    nexus_url=os.getenv("NEXUS_ADVISORY_URL","").rstrip("/")
+    token=os.getenv("NEXUS_ADVISORY_SECRET","")
+    bypass=os.getenv("NEXUS_DEPLOYMENT_BYPASS","")
+    if not (nexus_url.startswith("https://") and len(token)>=32 and len(bypass)>=32):
+        raise HTTPException(status_code=503, detail="Protected NEXUS research service not configured.")
+    quote=poly_us_quote(slug)
+    if quote.get("usable_for_research") is not True:
+        raise HTTPException(status_code=409, detail="US quote fails freshness, market-state or book integrity checks.")
+    selected_keys=("venue","source","market_slug","observed_at","exchange_transact_at",
+                   "best_yes_bid","best_yes_ask","quote_freshness_valid",
+                   "usable_for_research","market_state")
+    payload={k:quote.get(k) for k in selected_keys}
+    try:
+        import httpx
+        result=httpx.post(
+            nexus_url+"/api/us-observation-intelligence",
+            headers={"Authorization":"Bearer "+token,
+                     "x-vercel-protection-bypass":bypass},
+            json=payload,timeout=8.0,follow_redirects=False)
+        result.raise_for_status()
+        advisory=result.json()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Protected NEXUS US observation service unavailable.") from exc
+    if not (isinstance(advisory,dict)
+            and advisory.get("schema")=="nexus.oracle.poly_us_observation.v1"
+            and advisory.get("market_slug")==slug
+            and advisory.get("source")=="POLYMARKET_US_OFFICIAL_PUBLIC_SDK"
+            and advisory.get("authority")=="ADVISORY_ONLY"
+            and advisory.get("executionEnabled") is False
+            and advisory.get("decision")=="ABSTAIN_NO_CALIBRATED_MODEL"
+            and isinstance(advisory.get("worldline"),dict)
+            and advisory["worldline"].get("schema")=="nexus.worldline.forecast.v1"):
+        raise HTTPException(status_code=502, detail="Private NEXUS schema or authority mismatch.")
+    return {"schema":"chaytrades.poly_us.nexus_observation_response.v1",
+            "source":"POLYMARKET_US_PUBLIC_TO_PRIVATE_NEXUS",
+            "quote":quote,"advisory":advisory,
+            "private_intelligence_connected":True,
+            "execution_enabled":False,
+            "paper_position_opened":False}

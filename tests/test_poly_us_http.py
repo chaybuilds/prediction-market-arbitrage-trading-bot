@@ -38,3 +38,55 @@ def test_us_http_public_quote_and_witness_remain_readonly(monkeypatch):
     assert body["stored_server_side"] is False
     assert body["execution_enabled"] is False
     assert client.get("/api/poly-us/execution/status").json()["auto_trading"] is False
+
+
+def test_official_us_to_private_nexus_is_advisory_only(monkeypatch):
+    import api.index as route
+    import httpx
+    slug="cpc-btc-150k-12-31-2026"
+    origin="https://chay-trades-arb-terminal.vercel.app"
+    monkeypatch.setattr(route,"allowed_origins",[origin])
+    monkeypatch.setenv("POLY_US_PUBLIC_RESEARCH_ENABLED","true")
+    monkeypatch.setenv("NEXUS_ADVISORY_URL","https://private-nexus.example.com")
+    monkeypatch.setenv("NEXUS_ADVISORY_SECRET","test-nexus-secret-xxxxxxxxxxxxxxxxxxxx")
+    monkeypatch.setenv("NEXUS_DEPLOYMENT_BYPASS","test-protected-xxxxxxxxxxxxxxxxxxxx")
+    fake={"venue":"POLYMARKET_US","source":"POLYMARKET_US_OFFICIAL_PUBLIC_SDK",
+          "market_slug":slug,"observed_at":"2026-10-11T17:00:00Z",
+          "exchange_transact_at":"2026-10-11T16:59:40Z","best_yes_bid":.03,
+          "best_yes_ask":.04,"market_state":"MARKET_STATE_OPEN",
+          "quote_freshness_valid":True,"usable_for_research":True}
+    monkeypatch.setattr(route,"poly_us_quote",lambda s:fake)
+    seen={}
+    def fake_post(url,headers,json,timeout,follow_redirects):
+        seen.update({"url":url,"headers":headers,"payload":json})
+        assert follow_redirects is False
+        return type("Response",(),{"raise_for_status":lambda self:None,
+          "json":lambda self:{"schema":"nexus.oracle.poly_us_observation.v1",
+            "market_slug":slug,"source":"POLYMARKET_US_OFFICIAL_PUBLIC_SDK",
+            "authority":"ADVISORY_ONLY","executionEnabled":False,
+            "decision":"ABSTAIN_NO_CALIBRATED_MODEL",
+            "worldline":{"schema":"nexus.worldline.forecast.v1"}}})()
+    monkeypatch.setattr(httpx,"post",fake_post)
+    response=TestClient(app).get("/api/poly-us/nexus/"+slug,headers={"origin":origin})
+    assert response.status_code==200
+    out=response.json()
+    assert out["private_intelligence_connected"] is True
+    assert out["execution_enabled"] is False
+    assert "test-protected" not in str(out)
+    assert seen["payload"]["source"]=="POLYMARKET_US_OFFICIAL_PUBLIC_SDK"
+    assert seen["headers"]["Authorization"].startswith("Bearer ")
+    assert "x-vercel-protection-bypass" in seen["headers"]
+
+def test_us_to_nexus_rejects_spoofed_origin_and_stale_quote(monkeypatch):
+    import api.index as route
+    slug="cpc-btc-150k-12-31-2026"
+    origin="https://chay-trades-arb-terminal.vercel.app"
+    monkeypatch.setattr(route,"allowed_origins",[origin])
+    monkeypatch.setenv("POLY_US_PUBLIC_RESEARCH_ENABLED","true")
+    monkeypatch.setenv("NEXUS_ADVISORY_URL","https://private-nexus.example.com")
+    monkeypatch.setenv("NEXUS_ADVISORY_SECRET","test-nexus-secret-xxxxxxxxxxxxxxxxxxxx")
+    monkeypatch.setenv("NEXUS_DEPLOYMENT_BYPASS","test-protected-xxxxxxxxxxxxxxxxxxxx")
+    monkeypatch.setattr(route,"poly_us_quote",lambda s:{"usable_for_research":False})
+    client=TestClient(app)
+    assert client.get("/api/poly-us/nexus/"+slug,headers={"origin":"https://badhost.com"}).status_code==403
+    assert client.get("/api/poly-us/nexus/"+slug,headers={"origin":origin}).status_code==409

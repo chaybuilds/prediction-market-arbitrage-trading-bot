@@ -36,3 +36,11 @@ Polymarket contract in the Synpath/Kalshi fork. Do not mix markets.
 * Check \`select count(*),max(received_at) from oracle_paper_us.market_observations;\`
 * Verify both jobs via \`select jobname,schedule,active from cron.job where jobname like 'oracle_poly_us_%';\`
 * Investigate stale vendor timestamps, invalid snapshots and quota/rate limits. No retries should fabricate market data.
+
+
+## Private NEXUS public observation bridge
+* One official Polymarket US public quote now flows through the server-only protected POST /api/us-observation-intelligence adapter in the chaybuilds/nexus-core private repository.
+* The public terminal may request /api/poly-us/nexus/{slug} after verifying book state and freshness.
+* Private Worldline uses ONLY an ABSTAIN no-position branch because no forward-calibrated independent probability is available. No inferred edge, trade recommendation, position or execution.
+* The browser cannot access NEXUS_ADVISORY_SECRET or the Vercel deployment protection bypass token. Authentication is service-to-service. Public API origin restrictions are NOT sufficient for user authorization.
+* The private NEXUS service has no persistent forecast registry; the separate Supabase market-observation ledger stores official raw quotes. Do not call ephemeral forecasts proof of prediction accuracy.

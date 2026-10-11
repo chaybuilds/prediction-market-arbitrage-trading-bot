@@ -117,7 +117,32 @@ async function witness(){
 }
 $("polyLoad").addEventListener("click",loadMarkets);
 $("polyInspect").addEventListener("click",inspect);
+
+async function checkNexus(){
+  const slug=$("polyUSMarkets").value;
+  if(!current||!current.usable_for_research||current.market_slug!==slug){
+    info("Read a current, usable US market quote before requesting NEXUS research.");return;
+  }
+  $("polyNexus").disabled=true;
+  info("Sending sanitized official US public quote to private NEXUS Worldline. No personal account data or trading keys.");
+  try{
+    const data=await json("/api/poly-us/nexus/"+encodeURIComponent(slug));
+    const a=data.advisory;
+    if(data.execution_enabled!==false||data.private_intelligence_connected!==true||
+        a?.schema!=="nexus.oracle.poly_us_observation.v1"||a?.source!=="POLYMARKET_US_OFFICIAL_PUBLIC_SDK"||
+        a?.authority!=="ADVISORY_ONLY"||a?.executionEnabled!==false||
+        a?.worldline?.schema!=="nexus.worldline.forecast.v1"||
+        a?.decision!=="ABSTAIN_NO_CALIBRATED_MODEL")throw Error("Worldline authority or source mismatch");
+    info("PRIVATE NEXUS CONNECTED / "+a.decision+
+      " / "+a.blockers.join(", ")+
+      " / audit hash "+a.worldline.forecastHash.slice(0,16)+
+      "... Real quote was evaluated as evidence, NOT a predictive opportunity or a trade.");
+  }catch(e){info("Private NEXUS US observation not verified: "+String(e.message).slice(0,150));}
+  finally{$("polyNexus").disabled=false;}
+}
+
 $("polyWitness").addEventListener("click",witness);
+$("polyNexus").addEventListener("click",checkNexus);
 $("polyUSMarkets").addEventListener("change",()=>{current=null;$("polyUSQuote").hidden=true;renderRecords();});
 loadStatus();loadMarkets();
 })();
