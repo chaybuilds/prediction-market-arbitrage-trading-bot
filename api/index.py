@@ -202,3 +202,64 @@ def engine_intelligence(case_id: str, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail="NEXUS authority or schema mismatch.")
     return {"source": "PRIVATE_NEXUS_WORLDLINE", "candidate_source": "SYNTHETIC_FORK_FIXTURE",
             "execution_enabled": False, "advisory": advisory}
+
+
+
+# ===== Official Polymarket US (different exchange from intl Polymarket) =====
+# Public market information is available without account secrets.
+# This optional integration is guarded separately from Synpath cross-venue data.
+def _public_us_enabled() -> bool:
+    return os.getenv("POLY_US_PUBLIC_RESEARCH_ENABLED", "false").lower() == "true"
+
+@app.get("/api/poly-us/status")
+def poly_us_status() -> dict[str, Any]:
+    from api.poly_us import connection_status
+    from api.execution_guard import execution_status
+    status = connection_status()
+    status["public_research_configured"] = _public_us_enabled()
+    status["execution"] = execution_status()
+    status["forward_ledger_persistent"] = False
+    status["note"] = "Credentials not read by public adapter. No orders or personal account requests."
+    return status
+
+@app.get("/api/poly-us/markets")
+def poly_us_markets(limit: int = 8) -> dict[str, Any]:
+    if not _public_us_enabled():
+        raise HTTPException(status_code=503, detail="Polymarket US public feed feature gate disabled.")
+    from api.poly_us import public_catalog, PublicQuoteUnavailable
+    try:
+        return public_catalog(limit=max(1,min(limit,8)))
+    except PublicQuoteUnavailable as exc:
+        raise HTTPException(status_code=502, detail="Official US market catalog temporarily unavailable.") from exc
+
+@app.get("/api/poly-us/quote/{slug}")
+def poly_us_quote(slug: str) -> dict[str, Any]:
+    if not _public_us_enabled():
+        raise HTTPException(status_code=503, detail="Polymarket US public feed feature gate disabled.")
+    from api.poly_us import public_quote, PublicQuoteUnavailable
+    try:
+        return public_quote(slug)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid Polymarket US slug.") from exc
+    except PublicQuoteUnavailable as exc:
+        raise HTTPException(status_code=502, detail="Official US market quote unavailable.") from exc
+
+@app.get("/api/poly-us/witness/{slug}")
+def poly_us_witness(slug: str) -> dict[str, Any]:
+    """Read the public quote and form a forward-only abstain record.
+    
+    This endpoint does NOT pretend to persist; no customer/user auth exists yet.
+    """
+    quote=poly_us_quote(slug)
+    from api.paper_forward import observation_event, assess_paper_intent
+    event=observation_event(quote)
+    decision=assess_paper_intent(quote)
+    return {"schema":"chaytrades.poly_us.paper_witness_response.v1",
+            "observation":event,"decision":decision,
+            "stored_server_side":False,
+            "never_assume_fill":True,"execution_enabled":False}
+
+@app.get("/api/poly-us/execution/status")
+def poly_us_execution_status() -> dict[str, Any]:
+    from api.execution_guard import execution_status
+    return execution_status()
