@@ -140,7 +140,7 @@ def engine_status() -> dict[str, Any]:
         "fork_strategy": {"integrated": fork_ok, "module": "src.strategy.Strategy"},
         "cross_venue_market_matching": {"integrated": False, "vendor_key_required": True,
                                         "status": "SYNC_PENDING"},
-        "nexus_worldline": {"runtime_connected": False, "status": "PRIVATE_ADVISORY_ADAPTER_PENDING"},
+        "nexus_worldline": {"runtime_connected": False, "configured": bool(os.getenv("NEXUS_ADVISORY_URL") and os.getenv("NEXUS_ADVISORY_SECRET")), "status": "CONFIGURED_NOT_PROVEN" if os.getenv("NEXUS_ADVISORY_URL") and os.getenv("NEXUS_ADVISORY_SECRET") else "PRIVATE_NOT_CONNECTED"},
         "alphapy": {"runtime_connected": False, "status": "NOT_IMPORTED_LEGACY_DEPENDENCIES"},
         "oddsharvester": {"runtime_connected": False, "status": "OPTIONAL_SPORTS_RESEARCH_NOT_IMPORTED"},
         "kalshi": {"live_quotes_connected": False, "status": "SEPARATE_VENUE_DATA_GATE"},
@@ -155,3 +155,50 @@ def engine_fixtures() -> dict[str, Any]:
     """Actual fork pricing + strategy on deterministic imaginary data, no external IO."""
     from api.engine_fixtures import evaluate_fixtures
     return evaluate_fixtures()
+
+
+@app.get("/api/engine/intelligence/{case_id}")
+def engine_intelligence(case_id: str, request: Request) -> dict[str, Any]:
+    """Server-to-server integration: original fork fixture -> private NEXUS Worldline.
+
+    No user secrets, account data, orders, or browser-facing NEXUS bearer tokens.
+    Fail closed if NEXUS runtime, permissions or returned authority cannot be verified.
+    """
+    origin = request.headers.get("origin")
+    if origin not in allowed_origins:
+        raise HTTPException(status_code=403, detail="Origin not authorized for public research preview.")
+    nexus_url = os.getenv("NEXUS_ADVISORY_URL", "").rstrip("/")
+    token = os.getenv("NEXUS_ADVISORY_SECRET", "")
+    if not (nexus_url.startswith("https://") and token and len(token) >= 32):
+        raise HTTPException(status_code=503, detail="Private NEXUS advisory runtime not configured.")
+    from api.engine_fixtures import evaluate_fixtures
+    fixture = evaluate_fixtures()
+    candidate = next((r for r in fixture["opportunities"] if r["id"] == case_id), None)
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="Fixture not found.")
+    payload = {
+        "id": candidate["id"], "asOf": fixture["as_of"], "quoteTime": fixture["as_of"],
+        "source": "FORK_FIXTURE", "yesPrice": candidate["yes_price"],
+        "noPrice": candidate["no_price"], "fees": candidate["fees"],
+        "rules": "synthetic_assumed", "liquidityVerified": False, "feesVerified": False,
+        "hypotheticalPairs": 100, "assumedBothLegFillProbability": 0.8,
+        "assumedSlippagePerPair": 0.01, "assumedHedgeFailureLossPerPair": 0.1,
+        "evidenceRefs": ["repo:chaybuilds/prediction-market-arbitrage-trading-bot:src/arbitrage.py"],
+    }
+    try:
+        import httpx
+        response = httpx.post(
+            nexus_url + "/api/arbitrage-intelligence",
+            json=payload,
+            headers={"Authorization": "Bearer " + token},
+            timeout=9.0,
+            follow_redirects=False,
+        )
+        response.raise_for_status()
+        advisory = response.json()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Private NEXUS advisory service unavailable.") from exc
+    if not isinstance(advisory, dict) or advisory.get("schema") != "nexus.oracle.prediction-arbitrage.v1" or advisory.get("authority") != "ADVISORY_ONLY" or advisory.get("executionEnabled") is not False or advisory.get("worldline", {}).get("schema") != "nexus.worldline.forecast.v1":
+        raise HTTPException(status_code=502, detail="NEXUS authority or schema mismatch.")
+    return {"source": "PRIVATE_NEXUS_WORLDLINE", "candidate_source": "SYNTHETIC_FORK_FIXTURE",
+            "execution_enabled": False, "advisory": advisory}
