@@ -190,7 +190,7 @@ def engine_intelligence(case_id: str, request: Request) -> dict[str, Any]:
         response = httpx.post(
             nexus_url + "/api/arbitrage-intelligence",
             json=payload,
-            headers={"Authorization": "Bearer " + token},
+            headers={"Authorization": "Bearer " + token, **({"x-vercel-protection-bypass": os.environ["NEXUS_DEPLOYMENT_BYPASS"]} if os.getenv("NEXUS_DEPLOYMENT_BYPASS") else {})},
             timeout=9.0,
             follow_redirects=False,
         )

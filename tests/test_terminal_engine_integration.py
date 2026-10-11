@@ -73,3 +73,28 @@ def test_nexus_gateway_never_exposes_token_or_orders(monkeypatch):
     data=response.json()
     assert data["execution_enabled"] is False
     assert "Bearer" not in str(data)
+
+
+def test_nexus_private_vercel_bypass_is_server_only(monkeypatch):
+    import api.index as route
+    import httpx
+    origin = "https://chay-trades-arb-terminal.vercel.app"
+    monkeypatch.setattr(route, "allowed_origins", [origin])
+    monkeypatch.setenv("NEXUS_ADVISORY_URL", "https://protected-example.vercel.app")
+    monkeypatch.setenv("NEXUS_ADVISORY_SECRET", "test-advisory-secret-xxxxxxxxxxxxxxxxx")
+    monkeypatch.setenv("NEXUS_DEPLOYMENT_BYPASS", "test-bypass-token-xxxxxxxxxxxxxx")
+    seen={}
+    def fake_post(url, json, headers, timeout, follow_redirects):
+        seen.update(headers)
+        assert "x-vercel-protection-bypass" in headers
+        assert "test-bypass" not in str(json)
+        return type("Response", (), {"raise_for_status": lambda self: None, "json": lambda self: {
+            "schema": "nexus.oracle.prediction-arbitrage.v1",
+            "authority": "ADVISORY_ONLY", "executionEnabled": False,
+            "worldline": {"schema": "nexus.worldline.forecast.v1"}
+        }})()
+    monkeypatch.setattr(httpx, "post", fake_post)
+    response=TestClient(app).get("/api/engine/intelligence/FX-BTC-001",headers={"origin":origin})
+    assert response.status_code == 200
+    assert "x-vercel-protection-bypass" not in str(response.json())
+    assert "Authorization" not in str(response.json())
