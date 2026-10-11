@@ -1,0 +1,22 @@
+name: Chay Trades Terminal Safety Checks
+on:
+  push:
+    branches: ["feature/chay-trades-arb-terminal-v01"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: JS syntax
+        run: node --check terminal/app.js
+      - name: Python syntax
+        run: python3 -m py_compile api/index.py
+      - name: Demo truth controls
+        run: |
+          grep -q 'SYNTHETIC MARKET' terminal/index.html
+          grep -q 'execution_enabled.*False' api/index.py
+          grep -q 'NOT CONNECTED' terminal/index.html
+          test -f LICENSE
