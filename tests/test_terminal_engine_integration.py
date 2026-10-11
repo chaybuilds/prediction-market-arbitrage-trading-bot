@@ -39,3 +39,37 @@ def test_live_scanner_fails_closed_without_data_key(monkeypatch):
     monkeypatch.delenv("PUBLIC_SCANNER_ENABLED", raising=False)
     response = TestClient(app).get("/api/opportunities", headers={"origin": "https://chay-trades-arb-terminal.vercel.app"})
     assert response.status_code == 503
+
+
+def test_nexus_gateway_abstains_when_not_configured(monkeypatch):
+    import api.index as route
+    origin = "https://chay-trades-arb-terminal.vercel.app"
+    monkeypatch.setattr(route, "allowed_origins", [origin])
+    monkeypatch.delenv("NEXUS_ADVISORY_URL", raising=False)
+    monkeypatch.delenv("NEXUS_ADVISORY_SECRET", raising=False)
+    response = TestClient(app).get("/api/engine/intelligence/FX-BTC-001", headers={"origin": origin})
+    assert response.status_code == 503
+
+def test_nexus_gateway_never_exposes_token_or_orders(monkeypatch):
+    import api.index as route
+    import httpx
+    origin = "https://chay-trades-arb-terminal.vercel.app"
+    monkeypatch.setattr(route, "allowed_origins", [origin])
+    monkeypatch.setenv("NEXUS_ADVISORY_URL", "https://example.org")
+    monkeypatch.setenv("NEXUS_ADVISORY_SECRET", "example-test-secret-not-for-production-xxxx")
+    def fake_post(url, json, headers, timeout, follow_redirects):
+        assert headers["Authorization"].startswith("Bearer ")
+        assert json["source"] == "FORK_FIXTURE"
+        assert json["rules"] == "synthetic_assumed"
+        assert "secret" not in str(json).lower()
+        assert follow_redirects is False
+        return type("Response", (), {"raise_for_status": lambda self: None, "json": lambda self: {
+            "schema":"nexus.oracle.prediction-arbitrage.v1","authority":"ADVISORY_ONLY",
+            "executionEnabled":False,"worldline":{"schema":"nexus.worldline.forecast.v1"}
+        }})()
+    monkeypatch.setattr(httpx, "post", fake_post)
+    response=TestClient(app).get("/api/engine/intelligence/FX-BTC-001", headers={"origin": origin})
+    assert response.status_code == 200
+    data=response.json()
+    assert data["execution_enabled"] is False
+    assert "Bearer" not in str(data)
