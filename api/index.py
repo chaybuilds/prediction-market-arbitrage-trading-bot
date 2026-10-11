@@ -121,3 +121,37 @@ def opportunities(request: Request) -> dict[str, Any]:
             raise HTTPException(status_code=502, detail="Upstream market data unavailable. Retrying automatically is disabled.") from exc
         _cached.update(at=time.monotonic(), data=data)
         return data
+
+
+@app.get("/api/engine/status")
+def engine_status() -> dict[str, Any]:
+    """Capability truth: source is present, but finance/data services have separate gates."""
+    try:
+        from api.engine_fixtures import evaluate_fixtures
+        fixture_count = len(evaluate_fixtures()["opportunities"])
+        fork_ok = fixture_count > 0
+    except Exception:
+        fixture_count, fork_ok = 0, False
+    return {
+        "schema": "chaytrades.capabilities.v1",
+        "engine": "Synpath fork + Chay Trades research adapter",
+        "fork_pricing": {"integrated": fork_ok, "module": "src.arbitrage.Pricer",
+                         "test_cases": fixture_count, "input_type": "synthetic"},
+        "fork_strategy": {"integrated": fork_ok, "module": "src.strategy.Strategy"},
+        "cross_venue_market_matching": {"integrated": False, "vendor_key_required": True,
+                                        "status": "SYNC_PENDING"},
+        "nexus_worldline": {"runtime_connected": False, "status": "PRIVATE_ADVISORY_ADAPTER_PENDING"},
+        "alphapy": {"runtime_connected": False, "status": "NOT_IMPORTED_LEGACY_DEPENDENCIES"},
+        "oddsharvester": {"runtime_connected": False, "status": "OPTIONAL_SPORTS_RESEARCH_NOT_IMPORTED"},
+        "kalshi": {"live_quotes_connected": False, "status": "SEPARATE_VENUE_DATA_GATE"},
+        "polymarket_us": {"live_quotes_connected": False, "status": "SEPARATE_VENUE_DATA_GATE"},
+        "execution_enabled": False,
+        "realized_profit_verified": False,
+    }
+
+
+@app.get("/api/engine/fixtures")
+def engine_fixtures() -> dict[str, Any]:
+    """Actual fork pricing + strategy on deterministic imaginary data, no external IO."""
+    from api.engine_fixtures import evaluate_fixtures
+    return evaluate_fixtures()
