@@ -23,6 +23,9 @@ requests are used by this code.** The `--live` flag explicitly fails closed.
    at most 20% of best-level liquidity, a maximum $2.50 stake, a maximum
    $7.50 open stake, a $5 daily worst-case-loss budget (including open
    stakes) and six simulated entries per UTC day.
+   Additional calibration gates reject contracts priced below 15c or above
+   85c, model/market disagreements over 18 percentage points, and entries
+   within five minutes of window close.
 7. Uses UNIQUE(event_slug) and SQLite transactions to prevent duplicates,
    even after a restart or overlapping scans.
 8. Checks previously simulated positions for the venue's official 0/1

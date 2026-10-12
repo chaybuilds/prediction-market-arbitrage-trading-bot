@@ -15,8 +15,11 @@ class Settings:
     model_uncertainty_buffer: float = 0.035
     slippage_usd_per_share: float = 0.01
     max_spread: float = 0.07
+    min_executable_price: float = 0.15
+    max_executable_price: float = 0.85
+    max_model_market_disagreement: float = 0.18
     min_seconds_after_start: int = 90
-    min_seconds_before_end: int = 120
+    min_seconds_before_end: int = 300
 
 
 @dataclass(frozen=True)
@@ -80,6 +83,11 @@ def candidate(window, book, forecast, settings):
     """
     if book.ask - book.bid > settings.max_spread:
         return None, "spread_too_wide"
+    market_mid = (book.bid + book.ask) / 2.0
+    # Do not trust an uncalibrated statistical model over the live market on
+    # extreme discrepancies. This is a conservative paper-only research gate.
+    if abs(forecast.p_up - market_mid) > settings.max_model_market_disagreement:
+        return None, "uncalibrated_market_disagreement"
     options = []
     up = book.ask
     down = 1.0 - book.bid
@@ -87,9 +95,13 @@ def candidate(window, book, forecast, settings):
         ("UP", up, book.ask, forecast.p_up, book.ask_qty),
         ("DOWN", down, book.bid, 1 - forecast.p_up, book.bid_qty),
     ]:
+        if not settings.min_executable_price <= price <= settings.max_executable_price:
+            continue  # Near-0/near-1 prices are calibration-unsafe with minute candles.
         fee = taker_fee_per_share(price, window.fee_coeff)
         edge = p - price - fee - settings.slippage_usd_per_share - settings.model_uncertainty_buffer
         options.append(Candidate(side, price, yes_limit, edge, depth))
+    if not options:
+        return None, "extreme_outcome_price"
     best = max(options, key=lambda o: o.expected_net_edge)
     if best.expected_net_edge < settings.min_edge:
         return None, "insufficient_after_cost_edge"

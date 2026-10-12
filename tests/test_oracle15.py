@@ -124,12 +124,23 @@ class TestModel(unittest.TestCase):
 
     def test_candidate_both_directions(self):
         book = Book(0.42, 0.44, 100, 100)
-        settings = Settings(min_edge=0.065)
+        settings = Settings(min_edge=0.065, max_model_market_disagreement=1.0)
         choice, reason = candidate(self.window, book, Forecast(0.82, 0.001, 84000, 59), settings)
         self.assertEqual((choice.side, reason), ("UP", "candidate"))
         choice, _ = candidate(self.window, book, Forecast(0.04, 0.001, 83500, 59), settings)
         self.assertEqual(choice.side, "DOWN")
         self.assertAlmostEqual(choice.ask_equivalent, 0.58)
+
+    def test_rejects_model_market_divergence_and_extreme_tails(self):
+        f = Forecast(0.30, 0.001, 83620, 59)
+        c, reason = candidate(self.window, Book(0.03, 0.04, 200, 200), f, Settings())
+        self.assertIsNone(c)
+        self.assertEqual(reason, "uncalibrated_market_disagreement")
+        c, reason = candidate(self.window, Book(0.02, 0.03, 200, 200), f,
+                              Settings(max_model_market_disagreement=1.0))
+        self.assertIsNone(c)
+        self.assertEqual(reason, "extreme_outcome_price")
+        self.assertEqual(Settings().min_seconds_before_end, 300)
 
     def test_skip_spread_and_no_edge(self):
         f = Forecast(0.5, 0.001, 83695, 59)
