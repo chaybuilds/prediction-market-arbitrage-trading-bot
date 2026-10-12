@@ -137,3 +137,8 @@ compares them with later official resolutions and concurrent market prices;
 its two-stage paper entry requires another independently fetched quote.
 Simulated profit-target, stop and max-hold scalp exits likewise require
 another quote and never represent real executed fills.
+
+The integrated read-only status report can be regenerated with
+`python3 -m oracle15.report`. It saves to
+`state/oracle15/research/scoreboard.json`, preserving separate labels for
+historical quote-replay, global BTC spot context and forward paper P&L.

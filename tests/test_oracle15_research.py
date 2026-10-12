@@ -288,6 +288,36 @@ class ArchiveTimeIntegrity(unittest.TestCase):
         self.assertEqual(event["settlement"],1.0)
 
 
+class ResearchScoreboardSafety(unittest.TestCase):
+    def test_no_data_is_not_invented_or_promoted(self):
+        from oracle15.report import make
+        with TemporaryDirectory() as root:
+            result=make(Path(root))
+            self.assertFalse(result["polymarket_us_archive"]["available"])
+            self.assertFalse(result["binance_btc_archive"]["available"])
+            self.assertFalse(result["forward_paper"]["available"])
+            self.assertEqual(result["promotion_gate"]["status"],"LOCKED")
+            self.assertFalse(result["promotion_gate"]["live_trading_allowed"])
+            self.assertEqual(result["execution_mode"],"PAPER_ONLY_NO_BROKER_CREDENTIALS")
+
+    def test_paper_loss_reported_as_paper_only(self):
+        from oracle15.report import make
+        with TemporaryDirectory() as root:
+            target=Path(root)
+            db=Ledger(target/"paper.sqlite3")
+            try:
+                c=Candidate("UP",.45,.45,.16,100)
+                self.assertTrue(db.enter(WIN,c,4,Settings(),START+250)[0])
+                pos=db.pending(START+1500)[0]
+                self.assertTrue(db.settle(pos["id"],0.0,START+1600))
+            finally:
+                db.close()
+            result=make(target)
+            self.assertLess(result["forward_paper"]["paper_modeled_total_pnl"],0)
+            self.assertEqual(result["forward_paper"]["capital_proof"],"NONE")
+            self.assertFalse(result["promotion_gate"]["live_trading_allowed"])
+
+
 class ArchiveIntegrity(unittest.TestCase):
     def test_documented_fee_start(self):
         self.assertEqual(FEE_CHANGE_UTC,1791381600)

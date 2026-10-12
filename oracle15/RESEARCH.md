@@ -41,8 +41,8 @@ USD-M perpetual BTC/USDT **15-minute candles**, fetched from
 `https://data.binance.vision`, verified against matching official
 `.CHECKSUM` SHA256 files. These are **not** historical Polymarket
 quotes, BRTI settlement, liquidation tapes, depth or news events.
-The 2020–2026 archive contains 80 matched months × two venues =
-160 verified monthly source files, totaling 473,128 venue-specific bars.
+The 2020–2026 archive contains 81 calendar months × two venues =
+162 verified monthly source files, totaling 473,128 venue-specific bars.
 
 The repository retains only data collector code and tests. All downloaded
 data, manifests, local logs and trades stay under gitignored `state/`.
@@ -73,6 +73,9 @@ python3 -m oracle15.leadlag
 
 # Import and call the local NEXUS experiment factory (advisory only).
 python3 -m oracle15.nexus_bridge --max-bars 30000
+
+# One-command local evidence scoreboard (all profit labels remain qualified).
+python3 -m oracle15.report
 
 # Independent live US public feed, local ledger and learning calibration.
 python3 -m oracle15 --once
