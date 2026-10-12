@@ -117,6 +117,28 @@ def latest_tournament(root):
     return {"available":False}
 
 
+def exploratory_tournament(root,scope):
+    folder=Path(root)/"reports"
+    if not folder.exists():
+        return {"available":False}
+    for path in sorted(folder.glob("*.json"),reverse=True):
+        try:
+            with path.open() as f:
+                report=json.load(f)
+            if report.get("study_scope")==scope:
+                oos=report.get("oos") or {}
+                return {"available":True,"scope":scope,"path":str(path),
+                        "usable_events":report.get("markets_seen"),
+                        "calendar_days":report.get("usable_days"),
+                        "strategy_variants":(report.get("manifest") or {}).get("candidate_count"),
+                        "heldout_markets":oos.get("test_markets"),
+                        "selection":oos.get("selected_by_training_only"),
+                        "capital_authority":"NONE"}
+        except (OSError,ValueError):
+            continue
+    return {"available":False}
+
+
 def get_report(file, keys=None):
     p=Path(file)
     if not p.exists():
@@ -140,6 +162,10 @@ def make(root):
         "polymarket_us_archive":query_summary(research/"us_quotes.sqlite3"),
         "binance_btc_archive":spot_summary(research/"spot.sqlite3"),
         "us_strategy_tournament":latest_tournament(research),
+        "us_pre_fee_exploratory":exploratory_tournament(
+            research,"PRE_OCT7_FEE_UNVERIFIED_EXPLORATORY"),
+        "us_low_price_tail_exploratory":exploratory_tournament(
+            research,"ULTRA_TAIL_EXPLORATORY_NOT_APPROVED"),
         "spot_futures_leadlag":get_report(research/"leadlag-report.json",
                  ("available_bars","usable_lagged_windows","candidate_count","champion",
                   "validation","test","trading_authority")),
@@ -174,6 +200,8 @@ def main():
                       "us_archive":report["polymarket_us_archive"],
                       "spot_archive":report["binance_btc_archive"],
                       "historical_heldout":report["us_strategy_tournament"].get("heldout_strategy"),
+                      "full_us_history":report["us_pre_fee_exploratory"],
+                      "tail_study":report["us_low_price_tail_exploratory"],
                       "leadlag_champion":report["spot_futures_leadlag"].get("champion"),
                       "paper":report["forward_paper"],
                       "live_order_authority":False},indent=2))

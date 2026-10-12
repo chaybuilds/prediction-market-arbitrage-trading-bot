@@ -169,6 +169,12 @@ and an explicit incremental-outcome test before any model uses them.
   pre-October 7 and therefore fee-uncertain, while 418 use the
   currently documented fee regime. Missing windows are not backfilled
   with synthetic guesses.
+- After the launch-to-present archive finished, the exploratory
+  **1,791 usable US window** / **21 calendar day** replay of the
+  192-strategy grid reserved a final **570 market held-out block**.
+  Training-only selection returned **ABSTAIN**; its historical
+  pre-October 7 fee assumptions are explicitly **unverified**, so
+  this does not establish a reliable negative or positive cash P&L.
 - Exploratory 5c–95c tail-scalp research at 2c/share of modeled
   execution slippage, expanded spread tolerance and current-fee events
   selected **ABSTAIN** on the final held-out block; the live paper bot
