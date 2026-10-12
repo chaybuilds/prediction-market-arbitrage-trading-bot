@@ -28,8 +28,9 @@ jobs:
           node --check terminal/app.js
           node --check terminal/engine.js
           node --check terminal/poly-us.js
+          node --check terminal/btc-15m.js
       - name: Python syntax
-        run: python -m py_compile api/index.py api/engine_fixtures.py
+        run: python -m py_compile api/index.py api/engine_fixtures.py api/poly_us_15m.py
       - name: Fail-closed truth controls
         run: |
           grep -q 'SYNTHETIC MARKET' terminal/index.html

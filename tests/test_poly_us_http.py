@@ -90,3 +90,24 @@ def test_us_to_nexus_rejects_spoofed_origin_and_stale_quote(monkeypatch):
     client=TestClient(app)
     assert client.get("/api/poly-us/nexus/"+slug,headers={"origin":"https://badhost.com"}).status_code==403
     assert client.get("/api/poly-us/nexus/"+slug,headers={"origin":origin}).status_code==409
+
+
+def test_current_btc15m_route_is_public_but_permanently_readonly(monkeypatch):
+    import api.index as route
+    import api.poly_us_15m as observer
+    client=TestClient(app)
+    monkeypatch.delenv("POLY_US_PUBLIC_RESEARCH_ENABLED",raising=False)
+    assert client.get("/api/poly-us/btc15m/current").status_code==503
+    monkeypatch.setenv("POLY_US_PUBLIC_RESEARCH_ENABLED","true")
+    monkeypatch.setattr(observer,"public_btc15m_bbo",lambda:{
+      "schema":"chaytrades.poly_us.btc15m.bbo.v1",
+      "venue":"POLYMARKET_US","source":"POLYMARKET_US_OFFICIAL_PUBLIC_BBO_SDK",
+      "best_bid":0.50,"best_ask":0.52,
+      "vendor_exchange_time_verified":False,
+      "depth_units_verified_as_executable_contracts":False,
+      "decision":"ABSTAIN_NO_CALIBRATED_SIGNAL","orders_submitted":0,
+      "execution_enabled":False})
+    result=client.get("/api/poly-us/btc15m/current")
+    assert result.status_code==200
+    assert result.json()["orders_submitted"]==0
+    assert result.json()["vendor_exchange_time_verified"] is False

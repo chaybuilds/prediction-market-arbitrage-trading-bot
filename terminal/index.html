@@ -13,6 +13,7 @@
   <script defer src="./app.js"></script>
   <script defer src="./engine.js"></script>
   <script defer src="./poly-us.js"></script>
+  <script defer src="./btc-15m.js"></script>
 </head>
 <body>
 <div id="universe" aria-hidden="true"></div>
@@ -63,7 +64,24 @@
             </div>
             <div class="orbit-panel" aria-label="Decorative simulated venue routing visualization"><div class="orbit-grid"></div><div class="orbit-ring orbit-a"></div><div class="orbit-ring orbit-b"></div><div class="orbit-ring orbit-c"></div><span class="orbit-crosshair crosshair-top">+</span><span class="orbit-crosshair crosshair-bottom">+</span><div class="orbit-node orbit-left"><i></i> KALSHI</div><div class="orbit-node orbit-right"><i></i> POLYMARKET</div><div class="orbit-center"><div class="orbit-core">◈</div><div class="orbit-word">NEXUS</div><div class="orbit-core-sub">MATCH ENGINE</div></div><div class="orbit-bottom-label">RESEARCH SYSTEM / 01</div><div class="orbit-coordinates">DATA SOURCE: DEMO</div></div>
           </section>
-          <section class="panel poly-us-panel" id="polyUSPanel" aria-label="Official Polymarket US public market and forward paper research">
+          
+<section class="panel btc15-panel" id="btc15Panel" aria-label="Live Bitcoin 15-minute Polymarket US research">
+  <div class="panel-header"><div><div class="panel-kicker">OFFICIAL POLYMARKET US · ROLLING 15-MINUTE WINDOW</div><h2>BTC / 15M <span class="btc15-em">Market Observer</span></h2></div><span class="outlined-tag" id="btc15State">READ-ONLY · NO ORDERS</span></div>
+  <p class="btc15-desc">Tracks the current US contract through the official SDK. Public best-bid/best-offer data only. The exchange quote timestamp and executable depth are not independently verified—no live or simulated fills are claimed.</p>
+  <div class="btc15-action"><button type="button" class="button primary" id="btc15Refresh">OBSERVE CURRENT BTC 15M →</button><a id="btc15EventLink" target="_blank" rel="noopener noreferrer" href="https://polymarket.us">VIEW OFFICIAL US MARKET ↗</a></div>
+  <div id="btc15Message" role="status" aria-live="polite" class="btc15-message">Click Observe to inspect the current UTC fifteen-minute BTC contract. No credentials required.</div>
+  <div id="btc15Snapshot" class="btc15-snapshot" hidden>
+    <div class="btc15-meta"><span id="btc15Window">WINDOW NOT VERIFIED</span><span id="btc15Slug">---</span></div>
+    <div class="btc15-metrics">
+      <div><span>BEST BID</span><strong id="btc15Bid">--</strong></div>
+      <div><span>BEST ASK</span><strong id="btc15Ask">--</strong></div>
+      <div><span>QUOTED SPREAD</span><strong id="btc15Spread">--</strong></div>
+      <div><span>VENDOR DEPTH FIELDS</span><strong id="btc15Depth">--</strong></div>
+    </div>
+    <div class="btc15-truth"><span id="btc15Validity">Not validated</span><span>EXCHANGE TIME: NOT ATTESTED</span><span>MODEL SIGNAL: NOT CALIBRATED</span><span>TRADE EXECUTION: DISABLED</span></div>
+  </div>
+</section>
+<section class="panel poly-us-panel" id="polyUSPanel" aria-label="Official Polymarket US public market and forward paper research">
   <div class="panel-header">
     <div><div class="panel-kicker">OFFICIAL US EXCHANGE / INDEPENDENT DATA FEED</div><h2>Polymarket US <span class="poly-us-em">Research Bridge</span></h2></div>
     <span class="outlined-tag" id="polyUSStatus">CHECKING / READ-ONLY</span>

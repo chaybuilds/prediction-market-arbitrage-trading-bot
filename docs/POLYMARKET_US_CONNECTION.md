@@ -44,3 +44,12 @@ Polymarket contract in the Synpath/Kalshi fork. Do not mix markets.
 * Private Worldline uses ONLY an ABSTAIN no-position branch because no forward-calibrated independent probability is available. No inferred edge, trade recommendation, position or execution.
 * The browser cannot access NEXUS_ADVISORY_SECRET or the Vercel deployment protection bypass token. Authentication is service-to-service. Public API origin restrictions are NOT sufficient for user authorization.
 * The private NEXUS service has no persistent forecast registry; the separate Supabase market-observation ledger stores official raw quotes. Do not call ephemeral forecasts proof of prediction accuracy.
+
+
+## BTC 15-minute US observation (12 October UTC)
+* Official active event slugs follow btc-updown-15m-YYYY-MM-DD-HHMMz at 00/15/30/45 minutes UTC.
+* The tradable market slug within each event uses a cpc- prefix. This was verified against live public US event data. The event-to-market mapping must be confirmed per request.
+* For this category the official SDK /book method may return 404 even while /bbo yields a valid market. Use BBO only for observations, never fill eligibility; the BBO lacks independently attested vendor exchange transaction time and its depth fields do not establish executable quantity.
+* api/poly_us_15m.py and GET /api/poly-us/btc15m/current expose a fail-closed, public, no-key BBO quote. The frontend observer requests it on load and user refresh, not as an auto trading signal.
+* A private Supabase schema observer stores real BTC 15m BBO observations every minute via fixed official US endpoint, retaining the exact raw response, SHA-256 fingerprint, server arrival time, ABSTAIN decision, and no-orders guard. Job: oracle_poly_us_btc15m_forward_v01.
+* Settlement reference in official US market rules is CF Benchmarks BRTI with exact time-window averaging. Ordinary BTC spot prices are not equivalent settlement proof.

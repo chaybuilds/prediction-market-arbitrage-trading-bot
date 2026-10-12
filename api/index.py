@@ -316,3 +316,16 @@ def poly_us_nexus(slug: str, request: Request) -> dict[str, Any]:
             "private_intelligence_connected":True,
             "execution_enabled":False,
             "paper_position_opened":False}
+
+
+
+@app.get("/api/poly-us/btc15m/current")
+def poly_us_btc15m_current() -> dict[str, Any]:
+    """Read-only public live BTC 15-minute BBO. No account keys, fills, or trading."""
+    if not _public_us_enabled():
+        raise HTTPException(status_code=503, detail="Official US public research feed disabled.")
+    from api.poly_us_15m import public_btc15m_bbo, BTC15mUnavailable
+    try:
+        return public_btc15m_bbo()
+    except BTC15mUnavailable as exc:
+        raise HTTPException(status_code=502, detail="Official US BTC 15-minute BBO unavailable.") from exc

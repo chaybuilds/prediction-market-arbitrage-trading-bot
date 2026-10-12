@@ -23,3 +23,19 @@
 .poly-us-footer{border-top:1px solid #2d4c43;margin-top:15px;padding-top:15px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:10px "DM Mono",monospace;color:#8eb49f;line-height:1.5}
 .poly-us-footer a{color:#9cf3bd;text-decoration:none}
 @media(max-width:750px){.poly-us-panel{padding:15px}.poly-us-picker{align-items:stretch;flex-direction:column}.poly-us-picker select{width:100%;flex:unset}.poly-us-numbers{grid-template-columns:repeat(2,minmax(0,1fr))}.poly-us-numbers strong{font-size:19px}}
+
+/* Official US BTC 15m public read-only market observer */
+.btc15-panel{padding:22px;margin:20px 0;border-color:#38554a;background:linear-gradient(140deg,#0a1718,#101e1f 60%,#0a1417)}
+.btc15-em{color:#91e8c3}
+.btc15-desc{color:#abc0b7;font-size:13px;line-height:1.6;max-width:890px;margin:12px 0}
+.btc15-action{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.btc15-action a{color:#a4efc7;text-decoration:none;font:11px "DM Mono",monospace}
+.btc15-message{color:#a7bbaf;font:11px "DM Mono",monospace;line-height:1.7;margin:13px 0}
+.btc15-snapshot{padding:15px;border:1px solid #294e43;border-radius:9px;background:#091819}
+.btc15-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:10px "DM Mono",monospace;color:#a9d4c0;padding-bottom:12px}
+.btc15-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.btc15-metrics>div{display:flex;flex-direction:column;gap:8px;background:#112727;border-radius:7px;padding:15px}
+.btc15-metrics span{font:10px "DM Mono",monospace;color:#96b5a8}
+.btc15-metrics strong{font:600 22px "Space Grotesk",sans-serif;color:#e1f4e5;font-variant-numeric:tabular-nums}
+.btc15-truth{margin-top:13px;display:flex;flex-wrap:wrap;gap:10px;font:10px "DM Mono",monospace;color:#b0cabe;line-height:1.5}
+@media(max-width:680px){.btc15-panel{padding:14px}.btc15-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.btc15-metrics strong{font-size:19px}}
