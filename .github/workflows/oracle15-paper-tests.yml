@@ -1,0 +1,34 @@
+name: ORACLE 15M paper lane tests
+
+on:
+  push:
+    paths:
+      - "oracle15/**"
+      - "tests/test_oracle15.py"
+      - ".github/workflows/oracle15-paper-tests.yml"
+  pull_request:
+    paths:
+      - "oracle15/**"
+      - "tests/test_oracle15.py"
+      - ".github/workflows/oracle15-paper-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unittest:
+    name: Python ${{ matrix.python-version }} / offline risk tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile offline paper engine
+        run: python -m compileall -q oracle15
+      - name: Run deterministic tests
+        run: python -m unittest discover -s tests -p test_oracle15.py -v
