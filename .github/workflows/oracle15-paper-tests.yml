@@ -4,12 +4,12 @@ on:
   push:
     paths:
       - "oracle15/**"
-      - "tests/test_oracle15.py"
+      - "tests/test_oracle15*.py"
       - ".github/workflows/oracle15-paper-tests.yml"
   pull_request:
     paths:
       - "oracle15/**"
-      - "tests/test_oracle15.py"
+      - "tests/test_oracle15*.py"
       - ".github/workflows/oracle15-paper-tests.yml"
 
 permissions:
@@ -31,4 +31,4 @@ jobs:
       - name: Compile offline paper engine
         run: python -m compileall -q oracle15
       - name: Run deterministic tests
-        run: python -m unittest discover -s tests -p test_oracle15.py -v
+        run: python -m unittest discover -s tests -p 'test_oracle15*.py' -v

@@ -31,7 +31,8 @@ def main():
         db = Ledger(state_dir / "paper.sqlite3")
         try:
             print(json.dumps({"mode": "PAPER_ONLY", "risk": db.stats(settings),
-                              "kill_switch": (state_dir / "KILL").exists()}, indent=2))
+                              "kill_switch": (state_dir / "KILL").exists(),
+                              "learning": db.calibration()}, indent=2))
         finally:
             db.close()
         return 0

@@ -11,6 +11,7 @@ class Settings:
     max_open_exposure_usd: float = 7.50
     max_daily_loss_usd: float = 5.0
     max_trades_per_day: int = 6
+    min_paper_risk_budget: float = 0.50
     min_edge: float = 0.065
     model_uncertainty_buffer: float = 0.035
     slippage_usd_per_share: float = 0.01
@@ -20,6 +21,15 @@ class Settings:
     max_model_market_disagreement: float = 0.18
     min_seconds_after_start: int = 90
     min_seconds_before_end: int = 300
+    paper_entry_confirmation_s: int = 20
+    paper_entry_max_delay_s: int = 120
+    paper_entry_max_adverse_move: float = 0.035
+    paper_scalp_enabled: bool = True
+    paper_scalp_profit_per_share: float = 0.075
+    paper_scalp_stop_per_share: float = 0.12
+    paper_scalp_max_hold_s: int = 240
+    paper_scalp_quote_lag_s: int = 20
+    paper_scalp_min_exit_buffer_s: int = 90
 
 
 @dataclass(frozen=True)

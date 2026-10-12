@@ -43,7 +43,7 @@ A profitable demo/backtest is not an independent live result.
 From repo root, using Python >=3.9:
 
 ```bash
-python3 -m unittest discover -s tests -p test_oracle15.py -v
+python3 -m unittest discover -s tests -p 'test_oracle15*.py' -v
 python3 -m oracle15 --once
 python3 -m oracle15 --status
 python3 -m oracle15 --loop --interval 30
@@ -125,3 +125,20 @@ python3 -m oracle15.macos_agent uninstall
 The service can run only while the laptop is powered, awake, connected,
 and permitted to run background tasks. It does not constitute always-on
 server infrastructure.
+
+## ORACLE Research Lab v0.2
+
+Read [RESEARCH.md](RESEARCH.md) for historical data provenance, fork evaluation,
+192 US event/quote strategies, 36 multi-year spot/perpetual strategies,
+NEXUS's advisory experiment bridge, leakage guards and empirical learning.
+
+The paper runner now **registers** 2m/5m/8m probability forecasts and
+compares them with later official resolutions and concurrent market prices;
+its two-stage paper entry requires another independently fetched quote.
+Simulated profit-target, stop and max-hold scalp exits likewise require
+another quote and never represent real executed fills.
+
+The integrated read-only status report can be regenerated with
+`python3 -m oracle15.report`. It saves to
+`state/oracle15/research/scoreboard.json`, preserving separate labels for
+historical quote-replay, global BTC spot context and forward paper P&L.
