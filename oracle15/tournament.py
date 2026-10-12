@@ -190,6 +190,8 @@ def main():
     p.add_argument("--train-days",type=int,default=2)
     p.add_argument("--max-events",type=int,default=0)
     p.add_argument("--include-pre-fee-uncertain",action="store_true")
+    p.add_argument("--tail-experiment",action="store_true",
+                   help="Experimental 5c-95c entry range at higher costs; no live promotion")
     p.add_argument("--out",default="")
     args=p.parse_args()
     if args.train_days<2:
@@ -197,8 +199,19 @@ def main():
     events=load_events(args.db,require_current_fee=not args.include_pre_fee_uncertain)
     if args.max_events>0:
         events=events[:args.max_events]
-    report=run_tournament(events,args.train_days,
+    costs=(Cost(price_floor=.05,price_ceiling=.95,
+                per_share_slippage=.02,max_spread=.10,
+                max_signal_fill_move=.10) if args.tail_experiment else Cost())
+    report=run_tournament(events,args.train_days,costs=costs,
         allow_pre_fee=args.include_pre_fee_uncertain)
+    if args.include_pre_fee_uncertain:
+        report["study_scope"]=("PRE_OCT7_FEE_UNVERIFIED_TAIL_EXPLORATORY" if args.tail_experiment
+                                else "PRE_OCT7_FEE_UNVERIFIED_EXPLORATORY")
+        report["historical_fee_validated"] = False
+    else:
+        report["study_scope"]=("ULTRA_TAIL_EXPLORATORY_NOT_APPROVED" if args.tail_experiment
+                               else "CORE_CURRENT_FEE_EXPERIMENT")
+        report["historical_fee_validated"] = True
     if not args.out:
         folder=Path(args.db).parent/"reports"
         folder.mkdir(parents=True,exist_ok=True)
@@ -217,6 +230,7 @@ def main():
         "chosen":report["oos"]["selected_by_training_only"] if report["oos"] else None,
         "walk_forward":report["walk_forward"]["result"] if report["walk_forward"] else None,
         "capital_authority":"NONE",
+        "study_scope":report["study_scope"],
     }
     print(json.dumps(summary,indent=2))
     return 0

@@ -65,6 +65,17 @@ class Runner:
                                 "asof":"FORWARD_ONLY"}))
             if self.ledger.exists(slug):
                 raise ValueError("already_traded_window")
+            stats=self.ledger.stats(self.settings,now)
+            remaining=max(0.0,self.settings.max_daily_loss_usd-
+                      max(0.0,-stats["realized_today"])-stats["open_exposure"])
+            paper_budget=min(self.settings.max_ticket_usd,stats["available"],
+                        self.settings.max_open_exposure_usd-stats["open_exposure"],remaining)
+            if (stats["trades_today"]>=self.settings.max_trades_per_day or
+                paper_budget<self.settings.min_paper_risk_budget):
+                prior_intent=self.ledger.entry_intent(slug)
+                if prior_intent and prior_intent["state"]=="SIGNALLED":
+                    self.ledger.finish_entry_intent(slug,"REJECTED","paper_risk_budget_exhausted")
+                raise ValueError("paper_risk_budget_exhausted")
             choice, reason = candidate(window, book, forecast, self.settings)
             context = {
                 "p_up": round(forecast.p_up, 4),
@@ -111,7 +122,7 @@ class Runner:
                           self.settings.slippage_usd_per_share)
             if not 0 < window.min_qty <= 1 or not 0 < window.tick <= 0.05:
                 raise ValueError("unsupported_market_lot_or_tick")
-            max_qty = min(self.settings.max_ticket_usd / price_cost, choice.price_depth * 0.20)
+            max_qty = min(paper_budget / price_cost, choice.price_depth * 0.20)
             qty = math.floor(max_qty / window.min_qty + 1e-9) * window.min_qty
             qty = round(qty, 6)
             if qty < window.min_qty:

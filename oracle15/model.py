@@ -11,6 +11,7 @@ class Settings:
     max_open_exposure_usd: float = 7.50
     max_daily_loss_usd: float = 5.0
     max_trades_per_day: int = 6
+    min_paper_risk_budget: float = 0.50
     min_edge: float = 0.065
     model_uncertainty_buffer: float = 0.035
     slippage_usd_per_share: float = 0.01

@@ -155,6 +155,24 @@ class PaperEntryConfirmation(unittest.TestCase):
         self.assertEqual(self.runner.ledger.entry_intent(WIN.event_slug)["state"],"REJECTED")
         self.assertEqual(len(self.runner.ledger.active_positions()),0)
 
+    def test_daily_budget_blocks_even_signaling_after_losses(self):
+        from oracle15.market import event_slug
+        past_pick=Candidate("UP",.45,.45,.2,10000)
+        for offset in (-1800,-900):
+            start=START+offset
+            historical=Window(event_slug(start),"cpc-"+event_slug(start),
+                             start,start+900,83500,.01,.01,.0695)
+            entered=self.runner.ledger.enter(historical,past_pick,5,
+                                               self.runner.settings,start+200)
+            self.assertTrue(entered[0],entered)
+            pending=self.runner.ledger.pending(start+1050)
+            self.assertTrue(pending)
+            self.assertTrue(self.runner.ledger.settle(pending[-1]["id"],0.0,start+1050))
+        observation=self.runner.tick(START+250)
+        self.assertEqual(observation["status"],"skip: paper_risk_budget_exhausted")
+        self.assertIsNone(self.runner.ledger.entry_intent(WIN.event_slug))
+        self.assertEqual(len(self.runner.ledger.active_positions()),0)
+
     def test_pending_entry_never_spends_after_emergency_stop(self):
         self.assertEqual(self.runner.tick(START+250)["status"],"PAPER_ENTRY_SIGNAL")
         (Path(self.tmp.name)/"KILL").touch()

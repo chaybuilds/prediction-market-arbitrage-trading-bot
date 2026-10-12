@@ -68,12 +68,25 @@ def paper_summary(file):
         resolved=scalar(db,"SELECT COUNT(*) FROM forecast_outcomes",0)
         intents=dict(db.execute(
             "SELECT state,COUNT(*) FROM paper_entry_intents GROUP BY state"))
+        # Comparable after-the-fact Brier scores from immutable forward predictions.
+        calibration={}
+        for horizon,n,brier,market_brier in db.execute("""SELECT
+            f.horizon_label,COUNT(*),
+            AVG((f.p_up-o.yes_settlement)*(f.p_up-o.yes_settlement)),
+            AVG(((f.bid_up+f.ask_up)/2-o.yes_settlement)*
+                ((f.bid_up+f.ask_up)/2-o.yes_settlement))
+            FROM forecast_registry f JOIN forecast_outcomes o USING(event_slug)
+            GROUP BY f.horizon_label"""):
+            calibration[horizon]={"n":n,"model_brier":round(brier,5),
+                                  "market_baseline_brier":round(market_brier,5),
+                                  "promotion_status":"LOCKED"}
         return {"available":True,"paper_positions_by_state":positions,
                 "paper_entries_total":trades,
                 "paper_modeled_total_pnl":round(pnl,4),
                 "forecast_checkpoints":forecasts,
                 "forward_forecast_events_resolved":resolved,
                 "entry_intent_states":intents,
+                "forward_calibration":calibration,
                 "capital_proof":"NONE"}
     finally:
         db.close()
@@ -87,7 +100,10 @@ def latest_tournament(root):
         try:
             with path.open() as f:
                 report=json.load(f)
-            if report.get("manifest",{}).get("research_schema")=="oracle15.research.tournament.v2":
+            manifest=report.get("manifest",{})
+            if (manifest.get("research_schema")=="oracle15.research.tournament.v2"
+                and manifest.get("costs",{}).get("price_floor")==0.15
+                and report.get("study_scope","CORE_CURRENT_FEE_EXPERIMENT")=="CORE_CURRENT_FEE_EXPERIMENT"):
                 held=report.get("oos") or {}
                 return {"available":True,"path":str(path),
                         "tested_us_events":report["markets_seen"],

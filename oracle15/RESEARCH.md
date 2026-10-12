@@ -68,6 +68,10 @@ python3 -m oracle15.spot_archive --start 2020-01 --end 2026-09
 # Training-only US quote-scalping tournament and anchored held-out block.
 python3 -m oracle15.tournament
 
+# EXTRA: 5c–95c exploratory high-cost tail entries, motivated by the
+# user's 6c-to-15c scalp example. This NEVER adjusts the live paper gate.
+python3 -m oracle15.tournament --tail-experiment
+
 # 36 paired spot/perpetual lead-lag hypotheses, 24h purged time splits.
 python3 -m oracle15.leadlag
 
@@ -158,6 +162,17 @@ and an explicit incremental-outcome test before any model uses them.
   walk-forward showed 24 model trades and approximately +$3.39
   conditional historical quote P&L, heavily concentrated in one
   day. Not reliable positive economic proof.
+- A completed, bounded launch-to-present Polymarket US historical scan
+  requested 1,859 quarter-hour windows. It retained **1,791** with
+  adequate market display prices, **20** sparse, **48** unavailable,
+  and **23,194** valid quote snapshots; 1,373 adequate windows are
+  pre-October 7 and therefore fee-uncertain, while 418 use the
+  currently documented fee regime. Missing windows are not backfilled
+  with synthetic guesses.
+- Exploratory 5c–95c tail-scalp research at 2c/share of modeled
+  execution slippage, expanded spread tolerance and current-fee events
+  selected **ABSTAIN** on the final held-out block; the live paper bot
+  still rejects 6c contracts until independent forward proof exists.
 - Full paired 2020–September 2026 spot/futures history tested 36
   predeclared rules on 236,136 usable aligned 15m observations,
   after assumed 12 basis points total spot-market friction.
