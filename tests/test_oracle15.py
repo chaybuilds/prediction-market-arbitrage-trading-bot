@@ -172,6 +172,18 @@ class TestLedgerAndRunner(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(reason, "expiry_too_near")
 
+    def test_daily_loss_budget_reserves_open_downside(self):
+        one = self.ledger.enter(self.window, self.choice, 5, self.settings, START+200)
+        self.assertTrue(one[0], one)
+        next_window = Window("btc-updown-15m-next", "cpc-next", START+900,
+                             START+1800, 83690, 0.01, 0.01, 0.0695)
+        middle = self.ledger.enter(next_window, self.choice, 5, self.settings, START+1100)
+        self.assertTrue(middle[0], middle)
+        third_window = Window("btc-updown-15m-third", "cpc-third", START+1800,
+                              START+2700, 83690, 0.01, 0.01, 0.0695)
+        result = self.ledger.enter(third_window, self.choice, 5, self.settings, START+2000)
+        self.assertEqual(result, (False, "daily_worst_case_loss_cap"))
+
     def test_kill_switch_disables_entries(self):
         runner = Runner(self.path / "runtime", client=FakeUS(), settings=self.settings)
         try:

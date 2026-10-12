@@ -101,6 +101,10 @@ class Ledger:
                 reason = "daily_trade_limit"
             elif stake > settings.max_ticket_usd + 1e-7:
                 reason = "ticket_limit"
+            elif max(0.0, -day_pnl) + exposure + stake > settings.max_daily_loss_usd + 1e-7:
+                # Worst-case binary loss: reserve the entire cost of open entries.
+                # A realized stop by itself cannot cap losses on simultaneous opens.
+                reason = "daily_worst_case_loss_cap"
             elif exposure + stake > settings.max_open_exposure_usd + 1e-7:
                 reason = "exposure_limit"
             elif stake > settings.paper_bankroll + realized - exposure + 1e-7:

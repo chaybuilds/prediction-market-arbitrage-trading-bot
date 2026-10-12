@@ -21,7 +21,8 @@ requests are used by this code.** The `--live` flag explicitly fails closed.
    spreads, a slippage reserve, and a further model-risk buffer.
 6. If it clears the net edge threshold, records an imaginary entry with
    at most 20% of best-level liquidity, a maximum $2.50 stake, a maximum
-   $7.50 open stake, a daily $5 stop and six simulated entries per UTC day.
+   $7.50 open stake, a $5 daily worst-case-loss budget (including open
+   stakes) and six simulated entries per UTC day.
 7. Uses UNIQUE(event_slug) and SQLite transactions to prevent duplicates,
    even after a restart or overlapping scans.
 8. Checks previously simulated positions for the venue's official 0/1
